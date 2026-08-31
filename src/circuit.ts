@@ -15,7 +15,9 @@ export interface CircuitOptions {
 interface ProviderHealth {
   consecutiveFailures: number;
   openedAt: number | null;
-  trialInFlight: boolean;
+  /** when the half-open trial started; a trial that never reports back
+   * expires after another cooldown instead of locking the provider out */
+  trialStartedAt: number | null;
 }
 
 export class CircuitBreaker {
@@ -33,7 +35,7 @@ export class CircuitBreaker {
   private health(provider: string): ProviderHealth {
     let h = this.providers.get(provider);
     if (!h) {
-      h = { consecutiveFailures: 0, openedAt: null, trialInFlight: false };
+      h = { consecutiveFailures: 0, openedAt: null, trialStartedAt: null };
       this.providers.set(provider, h);
     }
     return h;
@@ -46,14 +48,19 @@ export class CircuitBreaker {
     return 'open';
   }
 
-  /** true when a call may be attempted; a half-open circuit admits one trial */
-  allows(provider: string): boolean {
+  /** Try to acquire the right to attempt a call. Named for what it does:
+   * on a half-open circuit this CLAIMS the single trial slot (a mutation),
+   * so two callers get two different answers by design. An abandoned trial
+   * expires after another cooldown; it cannot lock the provider out. */
+  tryAcquire(provider: string): boolean {
     const s = this.state(provider);
     if (s === 'closed') return true;
     if (s === 'open') return false;
     const h = this.health(provider);
-    if (h.trialInFlight) return false;
-    h.trialInFlight = true;
+    if (h.trialStartedAt !== null && this.now() - h.trialStartedAt < this.cooldownMs) {
+      return false; // a live trial holds the slot
+    }
+    h.trialStartedAt = this.now();
     return true;
   }
 
@@ -61,13 +68,13 @@ export class CircuitBreaker {
     this.providers.set(provider, {
       consecutiveFailures: 0,
       openedAt: null,
-      trialInFlight: false
+      trialStartedAt: null
     });
   }
 
   recordFailure(provider: string): void {
     const h = this.health(provider);
-    h.trialInFlight = false;
+    h.trialStartedAt = null;
     h.consecutiveFailures += 1;
     if (h.openedAt !== null || h.consecutiveFailures >= this.threshold) {
       h.openedAt = this.now(); // opening, or re-opening after a failed trial

@@ -32,7 +32,13 @@ const LADDER: Rung[] = [
   {
     name: 'extract-first-object',
     transform: (t) => {
-      const start = t.indexOf('{');
+      // If the first JSON opener in the text is '[', the model produced an
+      // array; pulling an element out of it would return a value the model
+      // never produced. That is massaging, and the ladder refuses it.
+      const firstBrace = t.indexOf('{');
+      const firstBracket = t.indexOf('[');
+      if (firstBracket >= 0 && (firstBrace < 0 || firstBracket < firstBrace)) return null;
+      const start = firstBrace;
       if (start < 0) return null;
       let depth = 0;
       let inString = false;
@@ -69,7 +75,7 @@ export function repairJson(text: string): RepairSuccess | RepairFailure {
         ok: true,
         value,
         rung: rung.name,
-        repairsApplied: attempted.slice(0, -1).length > 0 && rung.name !== 'parse-direct' ? [rung.name] : []
+        repairsApplied: rung.name === 'parse-direct' ? [] : [rung.name]
       };
     } catch {
       // fall through to the next rung

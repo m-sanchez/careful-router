@@ -78,3 +78,26 @@ test('an empty registry refuses with a path to yes, never throws', () => {
   assert.equal(record.outcome.kind, 'cannot-route');
   assert.match((record.outcome as { pathToYes: string }).pathToYes, /register a model/);
 });
+
+test('an empty registry names its own constraint consistently in both fields', () => {
+  const record = route({ task: 't' }, []);
+  const refusal = record.outcome as Extract<typeof record.outcome, { kind: 'cannot-route' }>;
+  assert.equal(refusal.blockingStage, 'empty-registry');
+  assert.match(refusal.pathToYes, /registry is empty/);
+});
+
+test('duplicate ids cannot make the canonical snapshot order engine-dependent', () => {
+  const dup = {
+    id: 'same',
+    provider: 'p',
+    contextWindow: 10,
+    maxOutput: 10,
+    inUsdMicrosPerMTok: 1,
+    outUsdMicrosPerMTok: 1,
+    capabilities: [],
+    boundary: 'external' as const
+  };
+  const a = route({ task: 't' }, [dup, { ...dup }]);
+  const b = route({ task: 't' }, [{ ...dup }, dup]);
+  assert.equal(a.registryHash, b.registryHash);
+});

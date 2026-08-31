@@ -25,29 +25,29 @@ test('consecutive failures open the circuit at the threshold', () => {
   const { breaker } = withClock();
   for (let i = 0; i < 3; i++) breaker.recordFailure('api');
   assert.equal(breaker.state('api'), 'open');
-  assert.ok(!breaker.allows('api'));
+  assert.ok(!breaker.tryAcquire('api'));
 });
 
-test('after the cooldown the circuit admits exactly one trial', () => {
+test('after the cooldown the circuit admits exactly one trial, and an abandoned trial expires', () => {
   const { state, breaker } = withClock();
   for (let i = 0; i < 3; i++) breaker.recordFailure('api');
   state.now = 10_000;
   assert.equal(breaker.state('api'), 'half-open');
-  assert.ok(breaker.allows('api'));
-  assert.ok(!breaker.allows('api')); // second caller waits for the trial's verdict
+  assert.ok(breaker.tryAcquire('api'));
+  assert.ok(!breaker.tryAcquire('api')); // second caller waits for the trial's verdict
 });
 
 test('a successful trial closes the circuit; a failed one reopens it', () => {
   const { state, breaker } = withClock();
   for (let i = 0; i < 3; i++) breaker.recordFailure('api');
   state.now = 10_000;
-  breaker.allows('api');
+  breaker.tryAcquire('api');
   breaker.recordSuccess('api');
   assert.equal(breaker.state('api'), 'closed');
 
   for (let i = 0; i < 3; i++) breaker.recordFailure('api');
   state.now = 20_000;
-  breaker.allows('api');
+  breaker.tryAcquire('api');
   breaker.recordFailure('api');
   assert.equal(breaker.state('api'), 'open'); // reopened from the trial failure
 });
@@ -61,4 +61,14 @@ test('snapshot freezes every provider state for the audit record', () => {
     flaky: 'open',
     steady: 'closed'
   });
+});
+
+test('an abandoned trial expires after a cooldown instead of locking the provider out', () => {
+  const { state, breaker } = withClock();
+  for (let i = 0; i < 3; i++) breaker.recordFailure('api');
+  state.now = 10_000;
+  assert.ok(breaker.tryAcquire('api'), 'first trial acquired');
+  assert.ok(!breaker.tryAcquire('api'), 'slot held while the trial lives');
+  state.now = 20_001; // the trial never reported back
+  assert.ok(breaker.tryAcquire('api'), 'the stale trial expired; a new one may run');
 });

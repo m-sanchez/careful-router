@@ -152,6 +152,15 @@ export function route(
   let outcome: Outcome;
   if (survivors.length > 0) {
     outcome = { kind: 'selected', model: survivors[0].id };
+  } else if (ranked.length === 0) {
+    // an empty registry is its own constraint, named consistently in both
+    // fields of the refusal
+    outcome = {
+      kind: 'cannot-route',
+      blockingStage: 'empty-registry',
+      nearest: [],
+      pathToYes: 'register a model; the registry is empty'
+    };
   } else {
     const stage = STAGES.find((s) => s.name === blockingStage);
     const nearest: NearestFact[] =
@@ -160,16 +169,18 @@ export function route(
         : rankCandidates(lastAlive).map((m) => ({ model: m.id, wouldNeed: stage.wouldNeed(m, req) }));
     outcome = {
       kind: 'cannot-route',
-      blockingStage: blockingStage || 'availability',
+      blockingStage,
       nearest,
       pathToYes:
         nearest.length > 0
           ? `nearest serviceable: ${nearest[0].model}, needs ${nearest[0].wouldNeed}`
-          : 'register a model; the registry is empty'
+          : `every candidate fell before ${blockingStage}`
     };
   }
 
-  const registrySnapshot = [...registry].sort((a, b) => (a.id < b.id ? -1 : 1));
+  const registrySnapshot = [...registry].sort((a, b) =>
+    a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+  );
   const body = {
     version: 1 as const,
     request: req,

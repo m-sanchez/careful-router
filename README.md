@@ -1,9 +1,9 @@
 # careful-router
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-erasable_syntax-3178C6?logo=typescript&logoColor=white)
-![Node](https://img.shields.io/badge/node-%3E%3D22.6-5FA04E?logo=nodedotjs&logoColor=white)
+![Node](https://img.shields.io/badge/node-%3E%3D22.18-5FA04E?logo=nodedotjs&logoColor=white)
 ![Dependencies](https://img.shields.io/badge/runtime_dependencies-0-B45309)
-![Tests](https://img.shields.io/badge/tests-25_passing-2F6F44)
+[![CI](https://github.com/m-sanchez/careful-router/actions/workflows/test.yml/badge.svg)](https://github.com/m-sanchez/careful-router/actions/workflows/test.yml)
 ![License](https://img.shields.io/badge/license-MIT-6E6E6E)
 
 LLM routing with an audit trail. Route by capability record and cost, refuse
@@ -30,7 +30,7 @@ record.eliminations;  // every ruled-out model, with stage and written reason
 record.recordHash;    // SHA-256 over the canonical record
 ```
 
-The core makes zero network calls. `toAnthropicRequest(record.outcome.model)`
+The core makes zero network calls. `toAnthropicRequest(selectedRecord)`
 shapes the selection for the official Anthropic SDK; execution is yours.
 
 ## The policy is published, not learned
@@ -73,23 +73,41 @@ are refused at the boundary.
 ## Also in the box
 
 - **`CircuitBreaker`**: per-provider closed/open/half-open with an
-  injectable clock; a half-open circuit admits exactly one trial. Snapshots
-  feed routing, so an unavailable provider is eliminated *in writing*.
+  injectable clock. `tryAcquire` claims the single half-open trial slot
+  (named for the mutation it is), and an abandoned trial expires after a
+  cooldown instead of locking the provider out. Snapshots feed routing, so
+  an unavailable provider is eliminated *in writing*.
 - **`repairJson`**: an enumerated repair ladder for model output
   (`parse-direct → strip-code-fence → extract-first-object`). Each success
   is labelled with its rung; output that fails every rung is rejected with
   the attempt list, never massaged until it parses.
 
-## Run
+## Honest limits
+
+- The default registry is illustrative: real model ids, synthetic numbers,
+  there to exercise the policy. Pin your own snapshot for anything real.
+- `replay` detects edits by anyone who did not re-run `hashOf`, which this
+  package exports. No signature, no external anchor: the record proves
+  internal consistency, not custody.
+
+## Install
 
 ```bash
-npm install       # dev-only: typescript
-npm test          # node's built-in runner, via --experimental-strip-types
+npm install github:m-sanchez/careful-router#v2.0.0
+```
+
+Not yet on npm; the pinned git tag is the supported install and CI proves
+the packed tarball imports cleanly. Zero runtime dependencies.
+
+## Develop
+
+```bash
+npm ci            # dev-only: typescript
+npm test
 npm run typecheck
 ```
 
-Node 22.6+ (the source is erasable-syntax TypeScript, so node runs it
-directly). Zero runtime dependencies.
+Node 22.18+ (erasable-syntax TypeScript; node runs the sources directly).
 
 ## The tests are the point
 
@@ -103,3 +121,7 @@ directly). Zero runtime dependencies.
 | tampered record fails replay, named | the audit trail defends itself |
 | repriced registry flips reevaluate, not replay | yesterday's decision and today's answer are different questions |
 | truncated JSON fails every rung | repair is enumerated; completion would be fabrication |
+| an array wrapped in prose is refused, not element-extracted | a different value is not a repaired value |
+| an empty registry names its constraint in both fields | a refusal cannot contradict itself |
+| duplicate ids cannot bend the canonical order | the bit-identical claim survives hostile input |
+| an abandoned circuit trial expires | no permanent lock-out from a lost callback |

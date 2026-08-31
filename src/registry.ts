@@ -1,7 +1,9 @@
-/** Default registry: Anthropic's published models and prices (2026-06), plus
- * a local example. Prices are integer micro-USD per million tokens, taken
- * from the public pricing page; pin your own snapshot for production - the
- * registry you route over is the registry your records freeze. */
+/** Default registry: ILLUSTRATIVE capability records in the shape the
+ * router expects, plus a local example. The model ids are real; the
+ * numbers are synthetic and exist to exercise the policy, exactly like
+ * the fixture data in careful-verifier. Pin your own snapshot with your
+ * provider's current prices for anything real - the registry you route
+ * over is the registry your records freeze. */
 
 import type { ModelRecord } from './types.ts';
 
@@ -63,10 +65,16 @@ export const LOCAL_EXAMPLE: ModelRecord = {
 };
 
 /** Shape a selection into the request body for the official Anthropic SDK.
- * careful-router makes no network calls; hand this to your own client. */
+ * careful-router makes no network calls; hand this to your own client.
+ * Takes the selected ModelRecord, not a bare id, so the one function that
+ * faces the outside world cannot emit a request the router's own output
+ * stage would have eliminated. */
 export function toAnthropicRequest(
-  modelId: string,
+  model: ModelRecord,
   opts: { maxTokens?: number } = {}
 ): { model: string; max_tokens: number } {
-  return { model: modelId, max_tokens: opts.maxTokens ?? 16_000 };
+  return {
+    model: model.id,
+    max_tokens: Math.min(opts.maxTokens ?? 16_000, model.maxOutput)
+  };
 }
