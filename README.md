@@ -5,7 +5,7 @@ when no model qualifies, replay every decision.
 
 [More tools](https://github.com/m-sanchez) · [Working rules](https://miguelsanchez.co.uk/ethics)
 
-Most routers optimise where the query goes. This one can also prove why —
+Most routers optimise where the query goes. This one can also prove why,
 and says no when no model qualifies. The policy is deterministic code you
 can read, not a learned model; every decision emits a record that freezes
 everything it depended on; and a refusal names the constraint that failed
@@ -29,8 +29,8 @@ shapes the selection for the official Anthropic SDK; execution is yours.
 
 ## The policy is published, not learned
 
-Elimination stages run in a fixed order — `availability → boundary →
-capabilities → context → output → budget-in → budget-out` — and the survivor
+Elimination stages run in a fixed order: `availability → boundary →
+capabilities → context → output → budget-in → budget-out`, and the survivor
 ranking is one sentence: cheapest by input + output cost, ties broken by
 larger context window, then lexicographic id. The policy descriptor is
 hashed into every record, so a record also proves *which* policy decided.
@@ -52,7 +52,7 @@ A `RouteRecord` freezes the request, the policy (version + hash), the
 registry snapshot (+ hash), pricing, and the provider circuit states.
 
 - **`replay(record)`** re-derives the decision from the record's own frozen
-  inputs — bit-identical, even after prices change or providers vanish. A
+  inputs: bit-identical, even after prices change or providers vanish. A
   tampered record fails with the alteration named.
 - **`reevaluate(record, todaysRegistry)`** applies today's inputs to the old
   request and returns the diff. A changed answer is information, not an
@@ -60,16 +60,16 @@ registry snapshot (+ hash), pricing, and the provider circuit states.
 
 The bit-identical claim rests on a canonical byte form, specified in
 `src/canonical.ts`: object keys sorted, no insignificant whitespace,
-SHA-256, and **all numbers are integers** — costs travel as micro-USD per
+SHA-256, and **all numbers are integers**: costs travel as micro-USD per
 million tokens (`$5.00/MTok = 5_000_000`), never floats. Non-integer numbers
 are refused at the boundary.
 
 ## Also in the box
 
-- **`CircuitBreaker`** — per-provider closed/open/half-open with an
+- **`CircuitBreaker`**: per-provider closed/open/half-open with an
   injectable clock; a half-open circuit admits exactly one trial. Snapshots
   feed routing, so an unavailable provider is eliminated *in writing*.
-- **`repairJson`** — an enumerated repair ladder for model output
+- **`repairJson`**: an enumerated repair ladder for model output
   (`parse-direct → strip-code-fence → extract-first-object`). Each success
   is labelled with its rung; output that fails every rung is rejected with
   the attempt list, never massaged until it parses.

@@ -62,7 +62,7 @@ export function reevaluate(
     after: fresh.outcome,
     record: fresh,
     detail: changed
-      ? 'today’s policy inputs give a different answer to the old request'
-      : 'today’s policy inputs still give the recorded answer'
+      ? "today's policy inputs give a different answer to the old request"
+      : "today's policy inputs still give the recorded answer"
   };
 }
