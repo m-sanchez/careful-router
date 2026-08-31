@@ -1,5 +1,11 @@
 # careful-router
 
+![TypeScript](https://img.shields.io/badge/TypeScript-erasable_syntax-3178C6?logo=typescript&logoColor=white)
+![Node](https://img.shields.io/badge/node-%3E%3D22.6-5FA04E?logo=nodedotjs&logoColor=white)
+![Dependencies](https://img.shields.io/badge/runtime_dependencies-0-B45309)
+![Tests](https://img.shields.io/badge/tests-25_passing-2F6F44)
+![License](https://img.shields.io/badge/license-MIT-6E6E6E)
+
 LLM routing with an audit trail. Route by capability record and cost, refuse
 when no model qualifies, replay every decision.
 
