@@ -1,0 +1,39 @@
+{
+  "name": "careful-router",
+  "version": "1.0.0",
+  "description": "LLM routing with an audit trail: route by capability record and cost, refuse when no model qualifies, replay every decision.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --experimental-strip-types --test \"test/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/m-sanchez/careful-router.git"
+  },
+  "author": "Miguel Sanchez <contact@miguelsanchez.co.uk>",
+  "license": "MIT",
+  "keywords": [
+    "llm",
+    "router",
+    "llm-routing",
+    "audit",
+    "anthropic",
+    "deterministic",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=22.6"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "typescript": "^5.7.0"
+  }
+}
