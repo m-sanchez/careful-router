@@ -5,7 +5,7 @@
  * provider's current prices for anything real - the registry you route
  * over is the registry your records freeze. */
 
-import type { ModelRecord } from './types.ts';
+import type { ModelRecord, RouteRecord } from './types.ts';
 
 const M = 1_000_000; // $1/MTok in micro-USD
 
@@ -141,17 +141,45 @@ export function validateRegistry(models: ModelRecord[]): string[] {
   return problems;
 }
 
+/** The ModelRecord a record selected, resolved against the record's OWN frozen
+ * registry - the audit-correct lookup, since that snapshot is what the
+ * decision was made on, not whatever the registry holds today. Null when the
+ * outcome was a routed no. */
+export function selectedModel(record: RouteRecord): ModelRecord | null {
+  if (record.outcome.kind !== 'selected') return null;
+  const id = record.outcome.model;
+  return record.registry.find((m) => m.id === id) ?? null;
+}
+
 /** Shape a selection into the request body for the official Anthropic SDK.
  * careful-router makes no network calls; hand this to your own client.
- * Takes the selected ModelRecord, not a bare id, so the one function that
- * faces the outside world cannot emit a request the router's own output
- * stage would have eliminated. */
+ *
+ * Takes the RouteRecord or the selected ModelRecord, so the one function that
+ * faces the outside world cannot emit a request the router's own output stage
+ * would have eliminated - and cannot silently emit {model: undefined,
+ * max_tokens: NaN} either. A routed no throws, by name. */
 export function toAnthropicRequest(
-  model: ModelRecord,
+  selection: ModelRecord | RouteRecord,
   opts: { maxTokens?: number } = {}
 ): { model: string; max_tokens: number } {
+  const model = isRouteRecord(selection) ? selectedModel(selection) : selection;
+  if (model == null) {
+    const outcome = (selection as RouteRecord).outcome;
+    throw new TypeError(
+      outcome.kind === 'cannot-route'
+        ? `this record is a routed no at ${outcome.blockingStage}; there is no model to request`
+        : `the record's own frozen registry has no model "${outcome.model}"`
+    );
+  }
+  if (typeof model.id !== 'string' || !Number.isSafeInteger(model.maxOutput)) {
+    throw new TypeError('a request needs a model with an id and an integer maxOutput');
+  }
   return {
     model: model.id,
     max_tokens: Math.min(opts.maxTokens ?? 16_000, model.maxOutput)
   };
+}
+
+function isRouteRecord(value: ModelRecord | RouteRecord): value is RouteRecord {
+  return typeof (value as RouteRecord).recordHash === 'string';
 }

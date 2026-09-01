@@ -5,6 +5,7 @@ export {
   ANTHROPIC_MODELS,
   LOCAL_EXAMPLE,
   microsPerMTok,
+  selectedModel,
   toAnthropicRequest,
   usdPerMTok,
   validateRegistry

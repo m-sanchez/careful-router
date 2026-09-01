@@ -25,7 +25,13 @@ everything it depended on; and a refusal names the constraint that failed
 and the nearest serviceable fact, never a silent fallback.
 
 ```ts
-import { route, ANTHROPIC_MODELS, LOCAL_EXAMPLE } from '@m-sanchez/careful-router';
+import {
+  route,
+  selectedModel,
+  toAnthropicRequest,
+  ANTHROPIC_MODELS,
+  LOCAL_EXAMPLE
+} from '@m-sanchez/careful-router';
 
 const record = route(
   { task: 'summarize case notes', requires: ['tools'], boundary: 'local-only' },
@@ -35,10 +41,15 @@ const record = route(
 record.outcome;       // { kind: 'selected', model: 'llama3.1:8b' }
 record.eliminations;  // every ruled-out model, with stage and written reason
 record.recordHash;    // SHA-256 over the canonical record
+
+toAnthropicRequest(record);  // { model: 'llama3.1:8b', max_tokens: 8192 }
+selectedModel(record);       // the ModelRecord, from the record's own snapshot
 ```
 
-The core makes zero network calls. `toAnthropicRequest(selectedRecord)`
-shapes the selection for the official Anthropic SDK; execution is yours.
+The core makes zero network calls. `toAnthropicRequest(record)` shapes the
+selection for the official Anthropic SDK - it resolves the id against the
+record's *own* frozen registry, and throws by name on a routed no rather than
+emitting a body with `max_tokens: NaN`. Execution is yours.
 
 ## The policy is published, not learned
 
@@ -152,6 +163,7 @@ Node 22.18+ (erasable-syntax TypeScript; node runs the sources directly).
 | repriced registry flips reevaluate, not replay | yesterday's decision and today's answer are different questions |
 | truncated JSON fails every rung | repair is enumerated; completion would be fabrication |
 | an array wrapped in prose is refused, not element-extracted | a different value is not a repaired value |
+| the README quickstart produces a valid request body | the documented call path is executed, not just described |
 | an empty registry names its constraint in both fields | a refusal cannot contradict itself |
 | a dollars-for-micros cost is refused, naming model and field | the adopter's likeliest mistake fails early, not anonymously |
 | duplicate ids cannot bend the canonical order | the bit-identical claim survives hostile input |
