@@ -112,6 +112,27 @@ registry snapshot (+ hash), pricing, and the provider circuit states.
   request and returns the diff. A changed answer is information, not an
   error.
 
+A third thing can move: the policy itself. `replay` reads the record's own
+policy version and hash *before* re-deriving anything, so a version bump is
+reported as drift against the code, never as a fault in the archive:
+
+```ts
+replay(recordWrittenIn2024);
+// policyDrift:    true
+// hashIntact:     true
+// verifiedUnder:  '1.0.0'
+// detail: 'written under policy 1.0.0; this build implements 2.0.0.
+//          Re-derived under policy 1.0.0 the record is bit-identical:
+//          the decision stands, the policy moved'
+```
+
+`POLICY_HISTORY` keeps every policy version this build can re-derive under -
+descriptor, normalization, ranking and refusal ordering - so an old record is
+replayed under the policy that wrote it. That is what "a record proves *which*
+policy decided" has to mean for the frozen descriptor to be more than a stored
+string. A record naming a policy this build has never shipped says exactly
+that, and is not re-derived.
+
 The bit-identical claim rests on a canonical byte form, shared verbatim with
 the other packages in this family, and specified in `src/canonical.ts`:
 
@@ -159,6 +180,9 @@ model and the field - see `validateRegistry` below.
 - `replay` detects edits by anyone who did not re-run `hashOf`, which this
   package exports. No signature, no external anchor: the record proves
   internal consistency, not custody.
+- `POLICY_HISTORY` reaches back only to policy 1.0.0, the first published one.
+  A record from a policy this build does not carry is reported as
+  unre-derivable, not guessed at.
 
 ## Install
 
@@ -192,6 +216,8 @@ Node 22.18+ (erasable-syntax TypeScript; node runs the sources directly).
 | open circuit eliminates at availability, in writing | the router routes around failure and says so |
 | replay matches after the world changes | the record's inputs are frozen, so the decision replays |
 | tampered record fails replay, named | the audit trail defends itself |
+| a policy bump replays as drift, not as a forged record | the archive is not blamed when the code moves |
+| an archived 1.0.0 record replays under 1.0.0, bit-identical | the frozen policy descriptor is executable, not decorative |
 | repriced registry flips reevaluate, not replay | yesterday's decision and today's answer are different questions |
 | truncated JSON fails every rung | repair is enumerated; completion would be fabrication |
 | an array wrapped in prose is refused, not element-extracted | a different value is not a repaired value |

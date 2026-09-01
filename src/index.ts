@@ -14,7 +14,15 @@ export { repairJson } from './repair.ts';
 export type { RepairFailure, RepairSuccess } from './repair.ts';
 export { reevaluate, replay } from './replay.ts';
 export type { ReevaluateResult, ReplayResult } from './replay.ts';
-export { POLICY, normalizeRequest, rankCandidates, route } from './route.ts';
+export {
+  deriveRecord,
+  normalizeRequest,
+  POLICY,
+  POLICY_HISTORY,
+  rankCandidates,
+  route
+} from './route.ts';
+export type { PolicyRules, Stage } from './route.ts';
 export type {
   AvailabilitySnapshot,
   CircuitState,
@@ -23,6 +31,7 @@ export type {
   ModelRecord,
   NearestFact,
   Outcome,
+  PolicyDescriptor,
   RouteRecord,
   RouteRequest
 } from './types.ts';

@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "request": {
+    "task": "long answer",
+    "requires": [],
+    "minContextTokens": 0,
+    "minOutputTokens": 200000,
+    "maxInUsdMicrosPerMTok": -1,
+    "maxOutUsdMicrosPerMTok": -1,
+    "boundary": "any"
+  },
+  "policy": {
+    "version": "1.0.0",
+    "stages": [
+      "availability",
+      "boundary",
+      "capabilities",
+      "context",
+      "output",
+      "budget-in",
+      "budget-out"
+    ],
+    "selection": "cheapest by inUsdMicrosPerMTok + outUsdMicrosPerMTok; ties broken by larger contextWindow, then lexicographic id"
+  },
+  "policyHash": "104762536259c56cb76cd2f8234f2dffdd65a5b359ae0e2745fc0a678541a5f7",
+  "registry": [
+    {
+      "id": "claude-fable-5",
+      "provider": "anthropic",
+      "contextWindow": 1000000,
+      "maxOutput": 128000,
+      "inUsdMicrosPerMTok": 10000000,
+      "outUsdMicrosPerMTok": 50000000,
+      "capabilities": [
+        "tools",
+        "vision",
+        "thinking"
+      ],
+      "boundary": "external"
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "provider": "anthropic",
+      "contextWindow": 200000,
+      "maxOutput": 64000,
+      "inUsdMicrosPerMTok": 1000000,
+      "outUsdMicrosPerMTok": 5000000,
+      "capabilities": [
+        "tools",
+        "vision"
+      ],
+      "boundary": "external"
+    },
+    {
+      "id": "claude-opus-5",
+      "provider": "anthropic",
+      "contextWindow": 1000000,
+      "maxOutput": 128000,
+      "inUsdMicrosPerMTok": 5000000,
+      "outUsdMicrosPerMTok": 25000000,
+      "capabilities": [
+        "tools",
+        "vision",
+        "thinking"
+      ],
+      "boundary": "external"
+    },
+    {
+      "id": "claude-sonnet-5",
+      "provider": "anthropic",
+      "contextWindow": 1000000,
+      "maxOutput": 128000,
+      "inUsdMicrosPerMTok": 2000000,
+      "outUsdMicrosPerMTok": 10000000,
+      "capabilities": [
+        "tools",
+        "vision",
+        "thinking"
+      ],
+      "boundary": "external"
+    },
+    {
+      "id": "llama3.1:8b",
+      "provider": "ollama",
+      "contextWindow": 128000,
+      "maxOutput": 8192,
+      "inUsdMicrosPerMTok": 0,
+      "outUsdMicrosPerMTok": 0,
+      "capabilities": [
+        "tools"
+      ],
+      "boundary": "local"
+    }
+  ],
+  "registryHash": "6d1975194d710275638b1dd3773b23d30f13f789b8ce3b07458c943b1a18fe99",
+  "availability": {},
+  "candidates": [
+    "llama3.1:8b",
+    "claude-haiku-4-5",
+    "claude-sonnet-5",
+    "claude-opus-5",
+    "claude-fable-5"
+  ],
+  "eliminations": [
+    {
+      "model": "llama3.1:8b",
+      "stage": "output",
+      "reason": "max output 8192 < required 200000"
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "stage": "output",
+      "reason": "max output 64000 < required 200000"
+    },
+    {
+      "model": "claude-sonnet-5",
+      "stage": "output",
+      "reason": "max output 128000 < required 200000"
+    },
+    {
+      "model": "claude-opus-5",
+      "stage": "output",
+      "reason": "max output 128000 < required 200000"
+    },
+    {
+      "model": "claude-fable-5",
+      "stage": "output",
+      "reason": "max output 128000 < required 200000"
+    }
+  ],
+  "outcome": {
+    "kind": "cannot-route",
+    "blockingStage": "output",
+    "nearest": [
+      {
+        "model": "llama3.1:8b",
+        "wouldNeed": "a max output of 200000 (has 8192)"
+      },
+      {
+        "model": "claude-haiku-4-5",
+        "wouldNeed": "a max output of 200000 (has 64000)"
+      },
+      {
+        "model": "claude-sonnet-5",
+        "wouldNeed": "a max output of 200000 (has 128000)"
+      },
+      {
+        "model": "claude-opus-5",
+        "wouldNeed": "a max output of 200000 (has 128000)"
+      },
+      {
+        "model": "claude-fable-5",
+        "wouldNeed": "a max output of 200000 (has 128000)"
+      }
+    ],
+    "pathToYes": "nearest serviceable: llama3.1:8b, needs a max output of 200000 (has 8192)"
+  },
+  "recordHash": "7277a445466870caf29b3ed576034549e98ab69285dbf0a32b078183a4fcf526"
+}

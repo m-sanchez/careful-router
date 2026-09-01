@@ -34,7 +34,45 @@ export const POLICY: PolicyDescriptor = {
     'refusal facts are ordered by distance to the constraint that failed - shortfall for context and output, overage for budget, count of missing capabilities, constant elsewhere - then by the selection order'
 };
 
-type Stage = {
+/** Policy 1.0.0, as shipped through 2.0.1, kept verbatim so a record written
+ * under it still hashes to its own policyHash and re-derives under its own
+ * rules. Its stage table is the current one: the checks and the wouldNeed
+ * strings never changed, only the two ordering rules did. */
+const POLICY_1_0_0: PolicyDescriptor = {
+  version: '1.0.0',
+  stages: [
+    'availability',
+    'boundary',
+    'capabilities',
+    'context',
+    'output',
+    'budget-in',
+    'budget-out'
+  ],
+  selection:
+    'cheapest by inUsdMicrosPerMTok + outUsdMicrosPerMTok; ties broken by larger contextWindow, then lexicographic id'
+};
+
+/** A policy version in executable form: its descriptor, and the three rules a
+ * decision reads. replay() re-derives an old record through the entry for the
+ * version that wrote it, which is what "a record proves which policy decided"
+ * has to mean for it to be more than a stored string. */
+export interface PolicyRules {
+  descriptor: PolicyDescriptor;
+  /** fill the request's defaults exactly as this policy did */
+  normalize: (req: RouteRequest) => Required<RouteRequest>;
+  /** order the survivors; the first is the selection */
+  rank: (models: ModelRecord[], req: Required<RouteRequest>) => ModelRecord[];
+  /** order the refusal facts when this stage empties the pool */
+  nearest: (
+    lastAlive: ModelRecord[],
+    stage: Stage,
+    req: Required<RouteRequest>
+  ) => ModelRecord[];
+  stages: Stage[];
+}
+
+export type Stage = {
   name: string;
   /** null = survives; string = elimination reason */
   check: (m: ModelRecord, req: Required<RouteRequest>, avail: AvailabilitySnapshot) => string | null;
@@ -113,6 +151,43 @@ const STAGES: Stage[] = [
     distance: (m, req) => m.outUsdMicrosPerMTok - req.maxOutUsdMicrosPerMTok
   }
 ];
+
+const CURRENT_RULES: PolicyRules = {
+  descriptor: POLICY,
+  normalize: (req) => normalizeRequest(req),
+  rank: (models, req) => rankCandidates(models, req),
+  nearest: (lastAlive, stage, req) =>
+    // lastAlive is already in selection order and Array.prototype.sort is
+    // stable, so ordering by distance keeps the selection order as the
+    // tie-break without a second key.
+    [...lastAlive].sort((a, b) => stage.distance(a, req) - stage.distance(b, req)),
+  stages: STAGES
+};
+
+const RULES_1_0_0: PolicyRules = {
+  descriptor: POLICY_1_0_0,
+  normalize: (req) =>
+    ({
+      task: req.task,
+      requires: [...(req.requires ?? [])].sort(),
+      minContextTokens: req.minContextTokens ?? 0,
+      minOutputTokens: req.minOutputTokens ?? 0,
+      maxInUsdMicrosPerMTok: req.maxInUsdMicrosPerMTok ?? -1,
+      maxOutUsdMicrosPerMTok: req.maxOutUsdMicrosPerMTok ?? -1,
+      boundary: req.boundary ?? 'any'
+      // no expected volumes: 1.0.0 had no such field, and a frozen request
+      // must canonicalize to the bytes it was written with
+    }) as Required<RouteRequest>,
+  rank: (models) => rankCandidates(models),
+  nearest: (lastAlive) => rankCandidates(lastAlive),
+  stages: STAGES
+};
+
+/** Every policy this build can re-derive a record under, keyed by version. */
+export const POLICY_HISTORY: Readonly<Record<string, PolicyRules>> = {
+  '1.0.0': RULES_1_0_0,
+  [POLICY.version]: CURRENT_RULES
+};
 
 /** Fill defaults so the frozen request is complete, not implicit. */
 export function normalizeRequest(req: RouteRequest): Required<RouteRequest> {
@@ -193,22 +268,24 @@ export function route(
   return deriveRecord(request, registry, availability);
 }
 
-/** Re-derive a decision WITHOUT validating the registry. replay() uses this:
- * a record freezes the snapshot it was decided on, and a rule written after
- * the record was written must not turn an archive into an exception. */
+/** Re-derive a decision WITHOUT validating the registry, under a named policy.
+ * replay() uses this: a record freezes the snapshot it was decided on, and a
+ * rule written after the record was written must turn neither the archive into
+ * an exception nor its author into a suspect. */
 export function deriveRecord(
   request: RouteRequest,
   registry: ModelRecord[],
-  availability: AvailabilitySnapshot = {}
+  availability: AvailabilitySnapshot = {},
+  rules: PolicyRules = CURRENT_RULES
 ): RouteRecord {
-  const req = normalizeRequest(request);
-  const ranked = rankCandidates(registry, req);
+  const req = rules.normalize(request);
+  const ranked = rules.rank(registry, req);
   const eliminations: Elimination[] = [];
 
   let survivors = ranked;
   let blockingStage = '';
   let lastAlive: ModelRecord[] = ranked;
-  for (const stage of STAGES) {
+  for (const stage of rules.stages) {
     const next: ModelRecord[] = [];
     for (const m of survivors) {
       const reason = stage.check(m, req, availability);
@@ -237,15 +314,12 @@ export function deriveRecord(
       pathToYes: 'register a model; the registry is empty'
     };
   } else {
-    const stage = STAGES.find((s) => s.name === blockingStage);
-    // lastAlive is already in selection order and Array.prototype.sort is
-    // stable, so ordering by distance keeps the selection order as the
-    // tie-break without a second key.
+    const stage = rules.stages.find((s) => s.name === blockingStage);
     const nearest: NearestFact[] =
       stage == null
         ? []
-        : [...lastAlive]
-            .sort((a, b) => stage.distance(a, req) - stage.distance(b, req))
+        : rules
+            .nearest(lastAlive, stage, req)
             .map((m) => ({ model: m.id, wouldNeed: stage.wouldNeed(m, req) }));
     outcome = {
       kind: 'cannot-route',
@@ -264,8 +338,8 @@ export function deriveRecord(
   const body = {
     version: 1 as const,
     request: req,
-    policy: { ...POLICY, stages: [...POLICY.stages] },
-    policyHash: hashOf(POLICY),
+    policy: { ...rules.descriptor, stages: [...rules.descriptor.stages] },
+    policyHash: hashOf(rules.descriptor),
     registry: registrySnapshot,
     registryHash: hashOf(registrySnapshot),
     availability,
