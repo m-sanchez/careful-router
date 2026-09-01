@@ -5,6 +5,7 @@
 ![Dependencies](https://img.shields.io/badge/runtime_dependencies-0-B45309)
 [![CI](https://github.com/m-sanchez/careful-router/actions/workflows/test.yml/badge.svg)](https://github.com/m-sanchez/careful-router/actions/workflows/test.yml)
 ![License](https://img.shields.io/badge/license-MIT-6E6E6E)
+[![npm](https://img.shields.io/npm/v/@m-sanchez/careful-router?color=CB3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/@m-sanchez/careful-router)
 
 > **In plain English:** this sends each request to the right model for the job and the cost: a cheap model for easy work, a strong one for hard work.
 
@@ -14,6 +15,9 @@ when no model qualifies, replay every decision.
 [More tools](https://github.com/m-sanchez) · [Working rules](https://miguelsanchez.co.uk/ethics) ·
 [Worked example: routing-study](https://github.com/m-sanchez/routing-study)
 
+*Provenance: this came out of one body of production LLM work, extracted and
+generalised into a standalone package. First published 2026-08-31.*
+
 Most routers optimise where the query goes. This one can also prove why,
 and says no when no model qualifies. The policy is deterministic code you
 can read, not a learned model; every decision emits a record that freezes
@@ -21,7 +25,7 @@ everything it depended on; and a refusal names the constraint that failed
 and the nearest serviceable fact, never a silent fallback.
 
 ```ts
-import { route, ANTHROPIC_MODELS, LOCAL_EXAMPLE } from 'careful-router';
+import { route, ANTHROPIC_MODELS, LOCAL_EXAMPLE } from '@m-sanchez/careful-router';
 
 const record = route(
   { task: 'summarize case notes', requires: ['tools'], boundary: 'local-only' },
@@ -96,11 +100,12 @@ are refused at the boundary.
 ## Install
 
 ```bash
-npm install github:m-sanchez/careful-router#v2.0.0
+npm install @m-sanchez/careful-router
 ```
 
-Not yet on npm; the pinned git tag is the supported install and CI proves
-the packed tarball imports cleanly. Zero runtime dependencies.
+Also installable from a pinned git tag:
+`github:m-sanchez/careful-router#v2.0.1`. CI proves the packed tarball
+imports cleanly. Zero runtime dependencies.
 
 ## Develop
 
