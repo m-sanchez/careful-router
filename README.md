@@ -6,6 +6,8 @@
 [![CI](https://github.com/m-sanchez/careful-router/actions/workflows/test.yml/badge.svg)](https://github.com/m-sanchez/careful-router/actions/workflows/test.yml)
 ![License](https://img.shields.io/badge/license-MIT-6E6E6E)
 
+> **In plain English:** this sends each request to the right model for the job and the cost: a cheap model for easy work, a strong one for hard work.
+
 LLM routing with an audit trail. Route by capability record and cost, refuse
 when no model qualifies, replay every decision.
 
