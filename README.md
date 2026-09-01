@@ -9,7 +9,8 @@
 LLM routing with an audit trail. Route by capability record and cost, refuse
 when no model qualifies, replay every decision.
 
-[More tools](https://github.com/m-sanchez) · [Working rules](https://miguelsanchez.co.uk/ethics)
+[More tools](https://github.com/m-sanchez) · [Working rules](https://miguelsanchez.co.uk/ethics) ·
+[Worked example: routing-study](https://github.com/m-sanchez/routing-study)
 
 Most routers optimise where the query goes. This one can also prove why,
 and says no when no model qualifies. The policy is deterministic code you
