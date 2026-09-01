@@ -71,11 +71,26 @@ registry snapshot (+ hash), pricing, and the provider circuit states.
   request and returns the diff. A changed answer is information, not an
   error.
 
-The bit-identical claim rests on a canonical byte form, specified in
-`src/canonical.ts`: object keys sorted, no insignificant whitespace,
-SHA-256, and **all numbers are integers**: costs travel as micro-USD per
-million tokens (`$5.00/MTok = 5_000_000`), never floats. Non-integer numbers
-are refused at the boundary.
+The bit-identical claim rests on a canonical byte form, shared verbatim with
+the other packages in this family, and specified in `src/canonical.ts`:
+
+> Object keys sorted by code unit, no insignificant whitespace,
+> undefined-valued properties omitted, strings JSON-escaped, SHA-256 hex over
+> UTF-8. Numbers: finite only; -0 normalised to 0; integer-valued numbers must
+> be SAFE integers and print as integers; non-integers must satisfy
+> `|x| >= 1e-4` and print as the shortest round-trip decimal. The floor exists
+> because JS writes `0.000007` where Python writes `7e-06` - refusing those
+> values is what makes the byte form portable across languages.
+
+`test/fixtures/canonical-form.fixture.json` is the shared conformance fixture:
+27 accepted values with their exact bytes and hashes, 8 refused ones. The same
+file ships in the sibling packages, so a divergence surfaces as a failing case
+rather than as two packages hashing one value two ways.
+
+That is a rule about bytes. This package's separate rule that **costs travel as
+integer micro-USD per million tokens** (`$5.00/MTok = 5_000_000`, never floats)
+is a rule about a price sheet, and is enforced where a violation can name the
+model and the field - see `validateRegistry` below.
 
 ## Also in the box
 

@@ -1,10 +1,19 @@
-/** Canonical bytes for hashing. The bit-identical replay claim rests here,
- * so the rules are strict and named in the README:
- *   - object keys sorted lexicographically, no insignificant whitespace
- *   - numbers must be finite integers (costs travel as micro-USD integers)
- *   - hash algorithm is SHA-256, hex-encoded
- * Two semantically identical records produce the same bytes, or one of them
- * was never canonical to begin with. */
+/** The family canonical byte form. One rule, three packages: careful-router,
+ * frozen-eval and grounded-claims all canonicalize by these rules, so a value
+ * hashes to the same bytes wherever it is hashed. The bit-identical replay
+ * claim rests here.
+ *
+ * Object keys sorted by code unit, no insignificant whitespace,
+ * undefined-valued properties omitted, strings JSON-escaped, SHA-256 hex over
+ * UTF-8. Numbers: finite only; -0 normalised to 0; integer-valued numbers must
+ * be SAFE integers and print as integers; non-integers must satisfy |x| >= 1e-4
+ * and print as the shortest round-trip decimal. The floor exists because JS
+ * writes 0.000007 where Python writes 7e-06 - refusing those values is what
+ * makes the byte form portable across languages.
+ *
+ * The floor is a property of BYTES, not of money. This package's own rule that
+ * costs travel as integer micro-USD is a domain rule about a price sheet, and
+ * lives in validateRegistry, where a violation can name the model and field. */
 
 import { createHash } from 'node:crypto';
 
@@ -13,13 +22,26 @@ export function canonicalize(value: unknown): string {
   switch (typeof value) {
     case 'boolean':
       return value ? 'true' : 'false';
-    case 'number':
-      if (!Number.isFinite(value) || !Number.isInteger(value)) {
+    case 'number': {
+      if (!Number.isFinite(value)) {
+        throw new TypeError(`non-finite number ${value} cannot be canonicalized`);
+      }
+      const v = Object.is(value, -0) ? 0 : value;
+      if (Number.isInteger(v)) {
+        if (!Number.isSafeInteger(v)) {
+          throw new TypeError(
+            `integer ${v} is outside the safe integer range and cannot be canonicalized exactly`
+          );
+        }
+        return String(v);
+      }
+      if (Math.abs(v) < 1e-4) {
         throw new TypeError(
-          `non-integer number ${value} cannot be canonicalized; represent it as an integer (e.g. micro-units)`
+          `non-integer ${v} is below the canonical magnitude floor of 1e-4 and cannot be canonicalized; rescale it (e.g. to micro-units)`
         );
       }
-      return String(value);
+      return String(v);
+    }
     case 'string':
       return JSON.stringify(value);
     case 'object': {

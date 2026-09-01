@@ -12,8 +12,13 @@ test('canonical bytes are key-order independent', () => {
   assert.equal(hashOf({ b: 1, a: 2 }), hashOf({ a: 2, b: 1 }));
 });
 
-test('floats are refused at the canonical boundary', () => {
-  assert.throws(() => canonicalize({ cost: 4.99 }), /micro-units/);
+test('the canonical boundary refuses what it cannot write portably', () => {
+  // A finite non-integer is canonical bytes; a value below the 1e-4 floor is
+  // not, because JS and Python disagree on how to print it. The rule that
+  // COSTS must be integer micro-USD is a rule about a price sheet, and lives
+  // in validateRegistry where it can name the model and the field.
+  assert.equal(canonicalize({ cost: 4.99 }), '{"cost":4.99}');
+  assert.throws(() => canonicalize({ cost: 0.000007 }), /magnitude floor/);
 });
 
 test('two identical decisions produce identical record hashes', () => {
