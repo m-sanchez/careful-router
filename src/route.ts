@@ -5,6 +5,7 @@
  * cheapest fact that would change the answer - never a silent fallback. */
 
 import { hashOf } from './canonical.ts';
+import { validateRegistry } from './registry.ts';
 import type {
   AvailabilitySnapshot,
   Elimination,
@@ -120,8 +121,27 @@ export function rankCandidates(models: ModelRecord[]): ModelRecord[] {
   });
 }
 
-/** Route a request over a registry snapshot. Pure: same inputs, same record. */
+/** Route a request over a registry snapshot. Pure: same inputs, same record.
+ *
+ * The snapshot is validated first, so a missed dollars-to-micro-USD
+ * conversion fails by name before any routing work happens rather than
+ * anonymously from inside a hash. */
 export function route(
+  request: RouteRequest,
+  registry: ModelRecord[],
+  availability: AvailabilitySnapshot = {}
+): RouteRecord {
+  const problems = validateRegistry(registry);
+  if (problems.length > 0) {
+    throw new TypeError(`this registry cannot be routed over: ${problems.join('; ')}`);
+  }
+  return deriveRecord(request, registry, availability);
+}
+
+/** Re-derive a decision WITHOUT validating the registry. replay() uses this:
+ * a record freezes the snapshot it was decided on, and a rule written after
+ * the record was written must not turn an archive into an exception. */
+export function deriveRecord(
   request: RouteRequest,
   registry: ModelRecord[],
   availability: AvailabilitySnapshot = {}

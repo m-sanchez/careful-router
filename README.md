@@ -99,6 +99,13 @@ model and the field - see `validateRegistry` below.
   (named for the mutation it is), and an abandoned trial expires after a
   cooldown instead of locking the provider out. Snapshots feed routing, so
   an unavailable provider is eliminated *in writing*.
+- **`validateRegistry(models)`**: named problems with a pinned snapshot -
+  `claude-sonnet-5.inUsdMicrosPerMTok is 2.5 (not an integer); costs are
+  integer micro-USD per MTok - $2.50/MTok is 2500000` - plus duplicate ids and
+  negative values. `route()` runs it first, so a missed conversion fails by
+  name before any routing happens instead of anonymously from inside a hash.
+  `microsPerMTok(2.5) === 2_500_000` and `usdPerMTok(2_500_000) === '$2.50'`
+  are the blessed conversions in both directions.
 - **`repairJson`**: an enumerated repair ladder for model output
   (`parse-direct → strip-code-fence → extract-first-object`). Each success
   is labelled with its rung; output that fails every rung is rejected with
@@ -146,5 +153,6 @@ Node 22.18+ (erasable-syntax TypeScript; node runs the sources directly).
 | truncated JSON fails every rung | repair is enumerated; completion would be fabrication |
 | an array wrapped in prose is refused, not element-extracted | a different value is not a repaired value |
 | an empty registry names its constraint in both fields | a refusal cannot contradict itself |
+| a dollars-for-micros cost is refused, naming model and field | the adopter's likeliest mistake fails early, not anonymously |
 | duplicate ids cannot bend the canonical order | the bit-identical claim survives hostile input |
 | an abandoned circuit trial expires | no permanent lock-out from a lost callback |

@@ -1,7 +1,14 @@
 export { canonicalize, hashOf, sha256Hex } from './canonical.ts';
 export { CircuitBreaker } from './circuit.ts';
 export type { CircuitOptions } from './circuit.ts';
-export { ANTHROPIC_MODELS, LOCAL_EXAMPLE, toAnthropicRequest } from './registry.ts';
+export {
+  ANTHROPIC_MODELS,
+  LOCAL_EXAMPLE,
+  microsPerMTok,
+  toAnthropicRequest,
+  usdPerMTok,
+  validateRegistry
+} from './registry.ts';
 export { repairJson } from './repair.ts';
 export type { RepairFailure, RepairSuccess } from './repair.ts';
 export { reevaluate, replay } from './replay.ts';

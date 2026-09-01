@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ANTHROPIC_MODELS, LOCAL_EXAMPLE } from '../src/registry.ts';
-import { route } from '../src/route.ts';
+import { deriveRecord, route } from '../src/route.ts';
 import type { ModelRecord } from '../src/types.ts';
 
 const REGISTRY: ModelRecord[] = [...ANTHROPIC_MODELS, LOCAL_EXAMPLE];
@@ -97,7 +97,10 @@ test('duplicate ids cannot make the canonical snapshot order engine-dependent', 
     capabilities: [],
     boundary: 'external' as const
   };
-  const a = route({ task: 't' }, [dup, { ...dup }]);
-  const b = route({ task: 't' }, [{ ...dup }, dup]);
+  // route() refuses duplicate ids outright now, but replay re-derives archived
+  // records through deriveRecord without that guard, so the canonical ordering
+  // property still has to hold against hostile input.
+  const a = deriveRecord({ task: 't' }, [dup, { ...dup }]);
+  const b = deriveRecord({ task: 't' }, [{ ...dup }, dup]);
   assert.equal(a.registryHash, b.registryHash);
 });

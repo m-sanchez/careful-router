@@ -11,7 +11,7 @@
  * it is information, returned as a diff. */
 
 import { hashOf } from './canonical.ts';
-import { route } from './route.ts';
+import { deriveRecord, route } from './route.ts';
 import type { AvailabilitySnapshot, ModelRecord, Outcome, RouteRecord } from './types.ts';
 
 export interface ReplayResult {
@@ -25,7 +25,7 @@ export interface ReplayResult {
 export function replay(record: RouteRecord): ReplayResult {
   const { recordHash, ...body } = record;
   const hashIntact = hashOf(body) === recordHash && hashOf(record.registry) === record.registryHash;
-  const recomputed = route(record.request, record.registry, record.availability);
+  const recomputed = deriveRecord(record.request, record.registry, record.availability);
   const outcomeMatches = hashOf(recomputed.outcome) === hashOf(record.outcome);
   const matches = hashIntact && outcomeMatches && recomputed.recordHash === record.recordHash;
   return {

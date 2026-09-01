@@ -64,6 +64,83 @@ export const LOCAL_EXAMPLE: ModelRecord = {
   boundary: 'local'
 };
 
+/** The dollars-to-micro-USD conversion the integer-cost rule rests on, as one
+ * blessed implementation instead of a comment. $3.00/MTok is 3_000_000. */
+export function microsPerMTok(usdPerMillionTokens: number): number {
+  if (!Number.isFinite(usdPerMillionTokens) || usdPerMillionTokens < 0) {
+    throw new TypeError(`a price must be a non-negative finite number, got ${usdPerMillionTokens}`);
+  }
+  const micros = Math.round(usdPerMillionTokens * 1_000_000);
+  if (Math.abs(usdPerMillionTokens * 1_000_000 - micros) > 1e-6) {
+    throw new TypeError(
+      `$${usdPerMillionTokens}/MTok is finer than micro-USD and cannot be represented exactly`
+    );
+  }
+  return micros;
+}
+
+/** The inverse, for display: 3_000_000 reads back as "$3.00". */
+export function usdPerMTok(micros: number): string {
+  if (!Number.isSafeInteger(micros)) {
+    throw new TypeError(`a micro-USD rate must be a safe integer, got ${micros}`);
+  }
+  const negative = micros < 0;
+  const abs = Math.abs(micros);
+  const whole = Math.floor(abs / 1_000_000);
+  const fraction = String(abs % 1_000_000).padStart(6, '0').replace(/0+$/, '');
+  const decimals = fraction.length < 2 ? fraction.padEnd(2, '0') : fraction;
+  return `${negative ? '-' : ''}$${whole}.${decimals}`;
+}
+
+const COST_FIELDS = ['inUsdMicrosPerMTok', 'outUsdMicrosPerMTok'] as const;
+const TOKEN_FIELDS = ['contextWindow', 'maxOutput'] as const;
+
+/** Named problems with a registry snapshot, in the order they were found.
+ * An empty array means the snapshot is routable.
+ *
+ * This is the home of the integer-micro-USD rule. The canonical byte form
+ * accepts 2.5; a price sheet does not, because $2.50/MTok entered as 2.5 is
+ * a missed conversion and the router would otherwise certify it. Failing here
+ * names the model and the field, before any routing work happens. */
+export function validateRegistry(models: ModelRecord[]): string[] {
+  const problems: string[] = [];
+  const seen = new Set<string>();
+  models.forEach((m, index) => {
+    if (typeof m?.id !== 'string' || m.id.length === 0) {
+      problems.push(`the model at index ${index} has no id; a record names its selection by id`);
+      return;
+    }
+    if (seen.has(m.id)) {
+      problems.push(`duplicate model id "${m.id}"; a registry must name each model once`);
+    }
+    seen.add(m.id);
+    for (const field of COST_FIELDS) {
+      const v = m[field];
+      if (!Number.isFinite(v) || !Number.isInteger(v)) {
+        problems.push(
+          `${m.id}.${field} is ${v} (not an integer); costs are integer micro-USD per MTok - ` +
+            (Number.isFinite(v)
+              ? `${usdPerMTok(microsPerMTok(v))}/MTok is ${microsPerMTok(v)}`
+              : 'give it a finite integer')
+        );
+      } else if (v < 0) {
+        problems.push(`${m.id}.${field} is ${v} (negative); a price cannot be below zero`);
+      } else if (!Number.isSafeInteger(v)) {
+        problems.push(`${m.id}.${field} is ${v} (outside the safe integer range)`);
+      }
+    }
+    for (const field of TOKEN_FIELDS) {
+      const v = m[field];
+      if (!Number.isSafeInteger(v)) {
+        problems.push(`${m.id}.${field} is ${v}; token counts are safe whole numbers`);
+      } else if (v < 0) {
+        problems.push(`${m.id}.${field} is ${v} (negative); token counts cannot be below zero`);
+      }
+    }
+  });
+  return problems;
+}
+
 /** Shape a selection into the request body for the official Anthropic SDK.
  * careful-router makes no network calls; hand this to your own client.
  * Takes the selected ModelRecord, not a bare id, so the one function that
