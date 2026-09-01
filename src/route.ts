@@ -1,8 +1,12 @@
 /** The deterministic route policy. Elimination stages run in a fixed,
  * published order; the survivors are ranked by a fixed, published rule; and
  * every elimination lands in the record with its reason. When nothing
- * survives, the refusal names the stage that emptied the pool and the
- * cheapest fact that would change the answer - never a silent fallback. */
+ * survives, the refusal names the stage that emptied the pool and the facts
+ * NEAREST to it - ordered by distance to the constraint that failed, not by
+ * cost - never a silent fallback.
+ *
+ * Every published version of that policy stays here, in executable form, so a
+ * record can be re-derived under the policy that wrote it. */
 
 import { hashOf } from './canonical.ts';
 import { validateRegistry } from './registry.ts';

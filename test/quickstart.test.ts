@@ -24,10 +24,10 @@ test('the README quickstart produces a request body the Anthropic API accepts', 
   // official Anthropic SDK". A body with model: undefined and max_tokens: NaN
   // serialises to {"max_tokens":null} and fails as an opaque 400.
   const body = toAnthropicRequest(record);
-  assert.equal(body.model, 'llama3.1:8b');
   assert.ok(Number.isSafeInteger(body.max_tokens), `max_tokens was ${body.max_tokens}`);
-  assert.ok(body.max_tokens > 0 && body.max_tokens <= 8_192);
-  assert.equal(JSON.parse(JSON.stringify(body)).max_tokens, body.max_tokens);
+  // the exact body the README prints
+  assert.deepEqual(body, { model: 'llama3.1:8b', max_tokens: 8_192 });
+  assert.deepEqual(JSON.parse(JSON.stringify(body)), body);
 });
 
 test('selectedModel resolves against the record\'s own frozen registry, not today\'s', () => {

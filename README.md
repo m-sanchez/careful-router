@@ -72,7 +72,8 @@ On that workload a $1-in/$30-out model costs 115,000 micro-USD and a
 $5-in/$2-out model costs 501,000. Summing the two *rates* - 31 against 7 -
 picks the second, at 4.4x the money. Spend is compared as
 `expectedInTokens * inUsdMicrosPerMTok + expectedOutTokens * outUsdMicrosPerMTok`,
-undivided, so the comparison stays in exact integers. Without volumes the
+undivided, so the comparison stays in exact integers. State both volumes or
+neither; a fractional one is refused by name. Without volumes the
 policy falls back to the rate sum, which orders cost correctly **only when
 input and output volumes are equal** - and says so in `POLICY.selection`
 rather than calling itself cheapest. Ties go to the larger context window,
@@ -205,6 +206,9 @@ npm run typecheck
 Node 22.18+ (erasable-syntax TypeScript; node runs the sources directly).
 
 ## The tests are the point
+
+[`CLAIMS.md`](CLAIMS.md) maps every falsifiable claim on this page to the test
+that would fail if it stopped being true. The headlines:
 
 | Test | Claim |
 | :-- | :-- |

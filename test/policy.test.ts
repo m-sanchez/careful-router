@@ -39,6 +39,18 @@ test('cheapest means least expected spend when the request states its volumes', 
   assert.equal((record.outcome as { model: string }).model, 'cheap-in');
 });
 
+test('the README arithmetic holds: 115,000 micro-USD against 501,000', () => {
+  const spend = (m: ModelRecord, inTok: number, outTok: number) =>
+    (inTok * m.inUsdMicrosPerMTok + outTok * m.outUsdMicrosPerMTok) / 1_000_000;
+  assert.equal(spend(CHEAP_IN, 100_000, 500), 115_000);
+  assert.equal(spend(CHEAP_OUT, 100_000, 500), 501_000);
+  // and the rule that used to decide: 31 against 7, picking the dearer one
+  assert.ok(
+    CHEAP_OUT.inUsdMicrosPerMTok + CHEAP_OUT.outUsdMicrosPerMTok <
+      CHEAP_IN.inUsdMicrosPerMTok + CHEAP_IN.outUsdMicrosPerMTok
+  );
+});
+
 test('the rate sum is right when input and output volumes are equal', () => {
   const record = route(
     { task: 'chat', expectedInTokens: 1_000, expectedOutTokens: 1_000 },
@@ -59,7 +71,11 @@ test('nearest serviceable on output is the smallest shortfall, not the cheapest'
   // llama3.1:8b caps at 8,192 - 24x short - and is free, so cost order named
   // it the nearest. The 128K models are 72K short.
   assert.equal(refusal.nearest[0].model, 'claude-sonnet-5');
-  assert.match(refusal.pathToYes, /nearest serviceable: claude-sonnet-5/);
+  // the exact string the README prints
+  assert.equal(
+    refusal.pathToYes,
+    'nearest serviceable: claude-sonnet-5, needs a max output of 200000 (has 128000)'
+  );
   assert.deepEqual(
     refusal.nearest.map((n) => n.model),
     ['claude-sonnet-5', 'claude-opus-5', 'claude-fable-5', 'claude-haiku-4-5', 'llama3.1:8b']
