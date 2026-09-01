@@ -54,12 +54,42 @@ emitting a body with `max_tokens: NaN`. Execution is yours.
 ## The policy is published, not learned
 
 Elimination stages run in a fixed order: `availability → boundary →
-capabilities → context → output → budget-in → budget-out`, and the survivor
-ranking is one sentence: cheapest by input + output cost, ties broken by
-larger context window, then lexicographic id. The policy descriptor is
-hashed into every record, so a record also proves *which* policy decided.
+capabilities → context → output → budget-in → budget-out`. The policy
+descriptor is hashed into every record, so a record also proves *which*
+policy decided.
 
-When the pool empties, the outcome is a routed no:
+**Cheapest means cheapest.** Tell the router what the call is expected to
+weigh and it ranks by expected spend:
+
+```ts
+route(
+  { task: 'summarize case notes', expectedInTokens: 100_000, expectedOutTokens: 500 },
+  registry
+);
+```
+
+On that workload a $1-in/$30-out model costs 115,000 micro-USD and a
+$5-in/$2-out model costs 501,000. Summing the two *rates* - 31 against 7 -
+picks the second, at 4.4x the money. Spend is compared as
+`expectedInTokens * inUsdMicrosPerMTok + expectedOutTokens * outUsdMicrosPerMTok`,
+undivided, so the comparison stays in exact integers. Without volumes the
+policy falls back to the rate sum, which orders cost correctly **only when
+input and output volumes are equal** - and says so in `POLICY.selection`
+rather than calling itself cheapest. Ties go to the larger context window,
+then lexicographic id.
+
+**Nearest means nearest.** When the pool empties, the refusal facts are
+ordered by distance to the constraint that *failed* - the shortfall for
+context and output, the overage for budget, the count of missing capabilities
+- so the path to yes names the most achievable option, not the cheapest one:
+
+```ts
+route({ task: 'long answer', minOutputTokens: 200_000 }, registry).outcome.pathToYes;
+// nearest serviceable: claude-sonnet-5, needs a max output of 200000 (has 128000)
+// not llama3.1:8b, which is free, 8,192-capped, and 24x short
+```
+
+The full refusal:
 
 ```ts
 {
@@ -155,6 +185,8 @@ Node 22.18+ (erasable-syntax TypeScript; node runs the sources directly).
 | Test | Claim |
 | :-- | :-- |
 | cheapest qualifying model wins | the policy optimises cost, not prestige |
+| a 100K-in/500-out job picks the model that actually costs less | "cheapest" is expected spend, not a sum of two rates |
+| nearest serviceable is the smallest shortfall, not the cheapest | a refusal names the achievable path, not the free one |
 | local-only routes to the local model | a data boundary is a constraint, not a preference |
 | impossible budget → routed no with nearest fact | refusal carries its own path to yes |
 | open circuit eliminates at availability, in writing | the router routes around failure and says so |

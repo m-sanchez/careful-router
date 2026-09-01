@@ -27,8 +27,24 @@ export interface RouteRequest {
   minOutputTokens?: number;
   maxInUsdMicrosPerMTok?: number;
   maxOutUsdMicrosPerMTok?: number;
+  /** expected input volume for this call, in tokens. State both volumes and
+   * the policy ranks by expected spend instead of by the sum of the two
+   * rates, which only orders cost correctly at a 1:1 input:output ratio. */
+  expectedInTokens?: number;
+  /** expected output volume for this call, in tokens */
+  expectedOutTokens?: number;
   /** 'local-only' restricts to models whose data never leaves the machine */
   boundary?: 'any' | 'local-only';
+}
+
+/** The published policy, frozen into every record it decides. `nearest` is
+ * absent from policies written before the refusal ordering became a named
+ * rule, so an old descriptor still hashes to its original bytes. */
+export interface PolicyDescriptor {
+  version: string;
+  stages: string[];
+  selection: string;
+  nearest?: string;
 }
 
 export type CircuitState = 'closed' | 'open' | 'half-open';
@@ -60,7 +76,7 @@ export type Outcome =
 export interface RouteRecord {
   version: 1;
   request: Required<RouteRequest>;
-  policy: { version: string; stages: string[]; selection: string };
+  policy: PolicyDescriptor;
   policyHash: string;
   registry: ModelRecord[];
   registryHash: string;
