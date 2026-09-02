@@ -192,7 +192,7 @@ npm install @m-sanchez/careful-router
 ```
 
 Also installable from a pinned git tag:
-`github:m-sanchez/careful-router#v2.0.1`. CI proves the packed tarball
+`github:m-sanchez/careful-router#v3.0.0`. CI proves the packed tarball
 imports cleanly. Zero runtime dependencies.
 
 ## Develop
