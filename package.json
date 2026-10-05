@@ -27,16 +27,21 @@
     "type": "git",
     "url": "git+https://github.com/m-sanchez/careful-router.git"
   },
+  "homepage": "https://github.com/m-sanchez/careful-router#readme",
+  "bugs": {
+    "url": "https://github.com/m-sanchez/careful-router/issues"
+  },
   "author": "Miguel Sanchez <contact@miguelsanchez.co.uk>",
   "license": "MIT",
   "keywords": [
     "llm",
-    "router",
     "llm-routing",
-    "audit",
-    "anthropic",
+    "model-selection",
+    "audit-trail",
+    "cost-optimization",
     "deterministic",
-    "typescript"
+    "replay",
+    "anthropic"
   ],
   "engines": {
     "node": ">=22.18"
